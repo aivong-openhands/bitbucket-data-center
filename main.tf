@@ -12,6 +12,14 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.36"
     }
+    acme = {
+      source  = "vancluever/acme"
+      version = "2.43.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "4.0.5"
+    }
   }
   backend "local" {
     path = "terraform.tfstate"
@@ -30,6 +38,10 @@ provider "google" {
 
 data "google_client_config" "default" {}
 
+provider "acme" {
+  server_url = var.acme_server
+}
+
 provider "kubernetes" {
   host                   = "https://${google_container_cluster.primary.endpoint}"
   token                  = data.google_client_config.default.access_token
@@ -45,9 +57,9 @@ provider "helm" {
 }
 
 resource "google_container_cluster" "primary" {
-  name               = var.cluster_name
-  location           = var.region
-  network            = data.google_compute_network.vpc-network.name
+  name     = var.cluster_name
+  location = var.region
+  network  = data.google_compute_network.vpc-network.name
 
   # Remove the default node pool after creation, we'll use a separately managed pool
   remove_default_node_pool = true
@@ -165,7 +177,7 @@ resource "helm_release" "bitbucket" {
       volumes = {
         localHome = {
           persistentVolumeClaim = {
-            create = true
+            create           = true
             storageClassName = var.storage_class
             resources = {
               requests = {
@@ -203,7 +215,7 @@ locals {
 
 # Static IP for Ingress
 resource "google_compute_global_address" "bitbucket_ip" {
-  name  = "${var.cluster_name}-bitbucket-ip"
+  name = "${var.cluster_name}-bitbucket-ip"
 }
 
 # DNS Record for Bitbucket
@@ -214,52 +226,6 @@ resource "google_dns_record_set" "bitbucket" {
   type         = "A"
   ttl          = 300
   rrdatas      = [google_compute_global_address.bitbucket_ip.address]
-}
-
-# DNS Authorization for Certificate Manager
-resource "google_certificate_manager_dns_authorization" "bitbucket" {
-  name        = "${var.cluster_name}-bitbucket-dns-authz"
-  description = "DNS authorization for Bitbucket certificate"
-  domain      = local.bitbucket_domain
-}
-
-# DNS record for certificate validation
-resource "google_dns_record_set" "bitbucket_cert_validation" {
-  project      = var.project_id
-  managed_zone = var.dns_zone_name
-  name         = google_certificate_manager_dns_authorization.bitbucket.dns_resource_record[0].name
-  type         = google_certificate_manager_dns_authorization.bitbucket.dns_resource_record[0].type
-  ttl          = 300
-  rrdatas      = [google_certificate_manager_dns_authorization.bitbucket.dns_resource_record[0].data]
-}
-
-# Certificate Manager certificate
-resource "google_certificate_manager_certificate" "bitbucket" {
-  name        = "${var.cluster_name}-bitbucket-cert"
-  description = "Certificate for Bitbucket Data Center"
-  scope       = "DEFAULT"
-
-  managed {
-    domains = [local.bitbucket_domain]
-    dns_authorizations = [
-      google_certificate_manager_dns_authorization.bitbucket.id
-    ]
-  }
-}
-
-# Certificate Map for the certificate
-resource "google_certificate_manager_certificate_map" "bitbucket" {
-  name        = "${var.cluster_name}-bitbucket-cert-map"
-  description = "Certificate map for Bitbucket"
-}
-
-# Certificate Map Entry to associate certificate with the map
-resource "google_certificate_manager_certificate_map_entry" "bitbucket" {
-  name         = "${var.cluster_name}-bitbucket-cert-entry"
-  description  = "Certificate map entry for Bitbucket domain"
-  map          = google_certificate_manager_certificate_map.bitbucket.name
-  certificates = [google_certificate_manager_certificate.bitbucket.id]
-  hostname     = local.bitbucket_domain
 }
 
 # BackendConfig for health checks
@@ -273,13 +239,13 @@ resource "kubernetes_manifest" "bitbucket_backend_config" {
     }
     spec = {
       healthCheck = {
-        checkIntervalSec  = 30
-        timeoutSec        = 10
-        healthyThreshold  = 1
+        checkIntervalSec   = 30
+        timeoutSec         = 10
+        healthyThreshold   = 1
         unhealthyThreshold = 3
-        type              = "HTTP"
-        requestPath       = "/status"
-        port              = 7990
+        type               = "HTTP"
+        requestPath        = "/status"
+        port               = 7990
       }
     }
   }
@@ -317,11 +283,11 @@ resource "kubernetes_ingress_v1" "bitbucket" {
       "kubernetes.io/ingress.class"                 = "gce"
       "kubernetes.io/ingress.global-static-ip-name" = google_compute_global_address.bitbucket_ip.name
       # Use Certificate Manager certificate map
-      "networking.gke.io/certmap"                   = google_certificate_manager_certificate_map.bitbucket.name
+      "networking.gke.io/certmap" = google_certificate_manager_certificate_map.bitbucket.name
       # FrontendConfig for HTTP to HTTPS redirect
-      "networking.gke.io/v1beta1.FrontendConfig"    = "bitbucket-frontend-config"
+      "networking.gke.io/v1beta1.FrontendConfig" = "bitbucket-frontend-config"
       # Allow HTTP while certificate provisions
-      "kubernetes.io/ingress.allow-http"            = "true"
+      "kubernetes.io/ingress.allow-http" = "true"
     }
   }
 

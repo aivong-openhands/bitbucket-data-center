@@ -154,3 +154,44 @@ variable "dns_zone_name" {
   type        = string
   default     = ""
 }
+
+variable "database_version" {
+  description = "The database version to use."
+  type        = string
+  default     = "POSTGRES_16"
+}
+
+variable "database_tier" {
+  description = "The tier for the database."
+  type        = string
+  default     = "db-perf-optimized-N-2"
+}
+
+variable "database_name" {
+  description = "The name of the database."
+  type        = string
+  default     = "bitbucket"
+}
+
+variable "database_username" {
+  description = "The username of the database."
+  type        = string
+  default     = "bitbucket"
+}
+
+variable "database_password" {
+  description = "The password of the database."
+  type        = string
+  default     = "bitbucket"
+}
+
+variable "acme_email" {
+  description = "The email address to use for the ACME account."
+  type        = string
+}
+
+variable "acme_server" {
+  description = "The ACME server URL."
+  type        = string
+  default     = "https://acme-v02.api.letsencrypt.org/directory"
+}
