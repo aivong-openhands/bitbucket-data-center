@@ -332,13 +332,13 @@ resource "kubernetes_ingress_v1" "bitbucket" {
     rule {
       host = local.bitbucket_domain
       http {
-        # OAuth proxy path - must come before the catch-all
+        # Userinfo proxy path - must come before the catch-all
         path {
-          path      = "/oauth2/*"
-          path_type = "ImplementationSpecific"
+          path      = "/oauth2/userinfo"
+          path_type = "Exact"
           backend {
             service {
-              name = "oauth-proxy"
+              name = "userinfo-proxy"
               port {
                 number = 80
               }
@@ -366,8 +366,7 @@ resource "kubernetes_ingress_v1" "bitbucket" {
     helm_release.bitbucket,
     kubernetes_manifest.bitbucket_backend_config,
     kubernetes_manifest.bitbucket_frontend_config,
-    google_certificate_manager_certificate_map_entry.bitbucket,
-    kubernetes_service.oauth_proxy
+    google_certificate_manager_certificate_map_entry.bitbucket
   ]
 }
 
