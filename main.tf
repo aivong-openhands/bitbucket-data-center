@@ -203,7 +203,6 @@ locals {
 
 # Static IP for Ingress
 resource "google_compute_global_address" "bitbucket_ip" {
-  count = local.bitbucket_domain != "" ? 1 : 0
   name  = "${var.cluster_name}-bitbucket-ip"
 }
 
@@ -214,13 +213,11 @@ resource "google_dns_record_set" "bitbucket" {
   name         = var.dns_name
   type         = "A"
   ttl          = 300
-  rrdatas      = [google_compute_global_address.bitbucket_ip[0].address]
+  rrdatas      = [google_compute_global_address.bitbucket_ip.address]
 }
 
 # DNS Authorization for Certificate Manager
 resource "google_certificate_manager_dns_authorization" "bitbucket" {
-  count = local.bitbucket_domain != "" ? 1 : 0
-
   name        = "${var.cluster_name}-bitbucket-dns-authz"
   description = "DNS authorization for Bitbucket certificate"
   domain      = local.bitbucket_domain
@@ -228,20 +225,16 @@ resource "google_certificate_manager_dns_authorization" "bitbucket" {
 
 # DNS record for certificate validation
 resource "google_dns_record_set" "bitbucket_cert_validation" {
-  count = local.bitbucket_domain != "" && var.dns_zone_name != "" ? 1 : 0
-
   project      = var.project_id
   managed_zone = var.dns_zone_name
-  name         = google_certificate_manager_dns_authorization.bitbucket[0].dns_resource_record[0].name
-  type         = google_certificate_manager_dns_authorization.bitbucket[0].dns_resource_record[0].type
+  name         = google_certificate_manager_dns_authorization.bitbucket.dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.bitbucket.dns_resource_record[0].type
   ttl          = 300
-  rrdatas      = [google_certificate_manager_dns_authorization.bitbucket[0].dns_resource_record[0].data]
+  rrdatas      = [google_certificate_manager_dns_authorization.bitbucket.dns_resource_record[0].data]
 }
 
 # Certificate Manager certificate
 resource "google_certificate_manager_certificate" "bitbucket" {
-  count = local.bitbucket_domain != "" ? 1 : 0
-
   name        = "${var.cluster_name}-bitbucket-cert"
   description = "Certificate for Bitbucket Data Center"
   scope       = "DEFAULT"
@@ -249,34 +242,28 @@ resource "google_certificate_manager_certificate" "bitbucket" {
   managed {
     domains = [local.bitbucket_domain]
     dns_authorizations = [
-      google_certificate_manager_dns_authorization.bitbucket[0].id
+      google_certificate_manager_dns_authorization.bitbucket.id
     ]
   }
 }
 
 # Certificate Map for the certificate
 resource "google_certificate_manager_certificate_map" "bitbucket" {
-  count = local.bitbucket_domain != "" ? 1 : 0
-
   name        = "${var.cluster_name}-bitbucket-cert-map"
   description = "Certificate map for Bitbucket"
 }
 
 # Certificate Map Entry to associate certificate with the map
 resource "google_certificate_manager_certificate_map_entry" "bitbucket" {
-  count = local.bitbucket_domain != "" ? 1 : 0
-
   name         = "${var.cluster_name}-bitbucket-cert-entry"
   description  = "Certificate map entry for Bitbucket domain"
-  map          = google_certificate_manager_certificate_map.bitbucket[0].name
-  certificates = [google_certificate_manager_certificate.bitbucket[0].id]
+  map          = google_certificate_manager_certificate_map.bitbucket.name
+  certificates = [google_certificate_manager_certificate.bitbucket.id]
   hostname     = local.bitbucket_domain
 }
 
 # BackendConfig for health checks
 resource "kubernetes_manifest" "bitbucket_backend_config" {
-  count = local.bitbucket_domain != "" ? 1 : 0
-
   manifest = {
     apiVersion = "cloud.google.com/v1"
     kind       = "BackendConfig"
@@ -308,8 +295,6 @@ resource "kubernetes_manifest" "bitbucket_backend_config" {
 
 # Annotate service with BackendConfig
 resource "kubernetes_annotations" "bitbucket_service" {
-  count = local.bitbucket_domain != "" ? 1 : 0
-
   api_version = "v1"
   kind        = "Service"
   metadata {
@@ -325,16 +310,14 @@ resource "kubernetes_annotations" "bitbucket_service" {
 
 # Ingress for HTTPS with Certificate Manager
 resource "kubernetes_ingress_v1" "bitbucket" {
-  count = local.bitbucket_domain != "" ? 1 : 0
-
   metadata {
     name      = "bitbucket-ingress"
     namespace = kubernetes_namespace.bitbucket.metadata[0].name
     annotations = {
       "kubernetes.io/ingress.class"                 = "gce"
-      "kubernetes.io/ingress.global-static-ip-name" = google_compute_global_address.bitbucket_ip[0].name
+      "kubernetes.io/ingress.global-static-ip-name" = google_compute_global_address.bitbucket_ip.name
       # Use Certificate Manager certificate map
-      "networking.gke.io/certmap"                   = google_certificate_manager_certificate_map.bitbucket[0].name
+      "networking.gke.io/certmap"                   = google_certificate_manager_certificate_map.bitbucket.name
       # FrontendConfig for HTTP to HTTPS redirect
       "networking.gke.io/v1beta1.FrontendConfig"    = "bitbucket-frontend-config"
       # Allow HTTP while certificate provisions
@@ -381,8 +364,6 @@ resource "kubernetes_ingress_v1" "bitbucket" {
 
 # FrontendConfig for HTTP to HTTPS redirect
 resource "kubernetes_manifest" "bitbucket_frontend_config" {
-  count = local.bitbucket_domain != "" ? 1 : 0
-
   manifest = {
     apiVersion = "networking.gke.io/v1beta1"
     kind       = "FrontendConfig"
