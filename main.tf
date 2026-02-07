@@ -332,20 +332,6 @@ resource "kubernetes_ingress_v1" "bitbucket" {
     rule {
       host = local.bitbucket_domain
       http {
-        # Userinfo proxy path - must come before the catch-all
-        path {
-          path      = "/oauth2/userinfo"
-          path_type = "Exact"
-          backend {
-            service {
-              name = "userinfo-proxy"
-              port {
-                number = 80
-              }
-            }
-          }
-        }
-        # Default Bitbucket path
         path {
           path      = "/*"
           path_type = "ImplementationSpecific"
