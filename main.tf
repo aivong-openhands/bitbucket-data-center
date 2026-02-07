@@ -135,6 +135,13 @@ resource "helm_release" "bitbucket" {
         tag = var.bitbucket_version
       }
       replicaCount = var.bitbucket_replicas
+      database = {
+        url    = "jdbc:postgresql://${google_sql_database_instance.instance.private_ip_address}:5432/${var.database_name}"
+        driver = "org.postgresql.Driver"
+        credentials = {
+          secretName = kubernetes_secret.bitbucket_db_credentials.metadata[0].name
+        }
+      }
       bitbucket = {
         resources = {
           jvm = {
@@ -203,8 +210,29 @@ resource "helm_release" "bitbucket" {
 
   depends_on = [
     kubernetes_namespace.bitbucket,
-    google_container_node_pool.primary_nodes
+    google_container_node_pool.primary_nodes,
+    kubernetes_secret.bitbucket_db_credentials,
+    google_sql_database_instance.instance,
+    google_sql_database.bitbucket,
+    google_sql_user.db_user
   ]
+}
+
+# Kubernetes Secret for Bitbucket database credentials
+resource "kubernetes_secret" "bitbucket_db_credentials" {
+  metadata {
+    name      = "bitbucket-db-credentials"
+    namespace = kubernetes_namespace.bitbucket.metadata[0].name
+  }
+
+  data = {
+    username = var.database_username
+    password = var.database_password
+  }
+
+  type = "Opaque"
+
+  depends_on = [kubernetes_namespace.bitbucket]
 }
 
 # Local to get domain without trailing dot
@@ -304,6 +332,20 @@ resource "kubernetes_ingress_v1" "bitbucket" {
     rule {
       host = local.bitbucket_domain
       http {
+        # OAuth proxy path - must come before the catch-all
+        path {
+          path      = "/oauth2/*"
+          path_type = "ImplementationSpecific"
+          backend {
+            service {
+              name = "oauth-proxy"
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+        # Default Bitbucket path
         path {
           path      = "/*"
           path_type = "ImplementationSpecific"
@@ -324,7 +366,8 @@ resource "kubernetes_ingress_v1" "bitbucket" {
     helm_release.bitbucket,
     kubernetes_manifest.bitbucket_backend_config,
     kubernetes_manifest.bitbucket_frontend_config,
-    google_certificate_manager_certificate_map_entry.bitbucket
+    google_certificate_manager_certificate_map_entry.bitbucket,
+    kubernetes_service.oauth_proxy
   ]
 }
 
