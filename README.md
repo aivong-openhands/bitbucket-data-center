@@ -26,7 +26,7 @@ terraform workspace new <<YOUR_NAME>>-bitbucket-01
 
 ### Create tfvars file
 
-Make a copy of `example.tfvars` and name it `<<WORKSPACE_NAME>>.tfvars`:
+Make a copy of `tfvars.example` and name it `<<WORKSPACE_NAME>>.tfvars`:
 
 ```
 cp example.tfvars name-bitbucket-01.tfvars

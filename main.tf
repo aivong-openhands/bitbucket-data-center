@@ -24,6 +24,14 @@ terraform {
       source  = "hashicorp/tls"
       version = "4.0.5"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.12"
+    }
+    external = {
+      source  = "hashicorp/external"
+      version = "~> 2.3"
+    }
   }
   backend "local" {
     path = "terraform.tfstate"
@@ -71,6 +79,11 @@ provider "kubectl" {
 locals {
   # Remove trailing dot from dns_name if present (e.g., "example.com." -> "example.com")
   bitbucket_domain = trimsuffix(var.dns_name, ".")
+}
+
+resource "google_compute_network" "vpc_network" {
+  name                    = var.cluster_name
+  auto_create_subnetworks = true
 }
 
 # Static IP for Ingress

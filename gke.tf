@@ -1,7 +1,7 @@
 resource "google_container_cluster" "primary" {
   name     = var.cluster_name
   location = var.region
-  network  = data.google_compute_network.vpc-network.name
+  network  = google_compute_network.vpc_network.name
 
   # Remove the default node pool after creation, we'll use a separately managed pool
   remove_default_node_pool = true

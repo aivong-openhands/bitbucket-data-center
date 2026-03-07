@@ -16,11 +16,6 @@ variable "zone" {
   default     = "us-central1-a"
 }
 
-variable "vpc_network" {
-  description = "The name of the VPC network to deploy the instance into."
-  type        = string
-}
-
 variable "cluster_name" {
   description = "The name of the bitbucket data center GKE cluster."
   type        = string

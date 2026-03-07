@@ -28,7 +28,8 @@ resource "kubernetes_secret" "bitbucket_db_credentials" {
   depends_on = [kubernetes_namespace.bitbucket]
 }
 
-# Ingress for HTTPS with Certificate Manager
+# Ingress for HTTP (GKE Ingress controller creates the URL map and backend)
+# HTTPS is handled separately via google_compute_target_https_proxy
 resource "kubernetes_ingress_v1" "bitbucket" {
   metadata {
     name      = "bitbucket-ingress"
@@ -36,11 +37,9 @@ resource "kubernetes_ingress_v1" "bitbucket" {
     annotations = {
       "kubernetes.io/ingress.class"                 = "gce"
       "kubernetes.io/ingress.global-static-ip-name" = google_compute_global_address.bitbucket_ip.name
-      # Use Certificate Manager certificate map
-      "networking.gke.io/certmap" = google_certificate_manager_certificate_map.bitbucket.name
       # FrontendConfig for HTTP to HTTPS redirect
       "networking.gke.io/v1beta1.FrontendConfig" = "bitbucket-frontend-config"
-      # Allow HTTP while certificate provisions
+      # Allow HTTP (will redirect to HTTPS via FrontendConfig)
       "kubernetes.io/ingress.allow-http" = "true"
     }
   }
