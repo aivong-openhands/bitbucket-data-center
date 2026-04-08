@@ -14,14 +14,22 @@ resource "time_sleep" "wait_for_ingress" {
 }
 
 # Get the URL map name from GKE Ingress controller annotations
+# Waits and retries until the annotation is available
 data "external" "ingress_url_map" {
   program = ["bash", "-c", <<-EOT
-    URL_MAP=$(kubectl get ingress bitbucket-ingress -n bitbucket -o jsonpath='{.metadata.annotations.ingress\.kubernetes\.io/url-map}' 2>/dev/null)
-    if [ -z "$URL_MAP" ]; then
-      echo '{"url_map": ""}'
-    else
-      echo "{\"url_map\": \"$URL_MAP\"}"
-    fi
+    # Use gcloud to get credentials for the correct cluster
+    gcloud container clusters get-credentials "${var.cluster_name}" --region "${var.region}" --project "${var.project_id}" 2>/dev/null
+
+    for i in {1..30}; do
+      URL_MAP=$(kubectl get ingress bitbucket-ingress -n bitbucket -o jsonpath='{.metadata.annotations.ingress\.kubernetes\.io/url-map}' 2>/dev/null)
+      if [ -n "$URL_MAP" ]; then
+        echo "{\"url_map\": \"$URL_MAP\"}"
+        exit 0
+      fi
+      sleep 10
+    done
+    echo '{"error": "URL map annotation not found after 5 minutes"}' >&2
+    exit 1
   EOT
   ]
 
