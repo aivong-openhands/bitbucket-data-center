@@ -17,9 +17,9 @@ variable "zone" {
 }
 
 variable "cluster_name" {
-  description = "The name of the GKE cluster."
+  description = "The name of the bitbucket data center GKE cluster."
   type        = string
-  default     = "atlassian"
+  default     = "bitbucket"
 }
 
 variable "default_labels" {
@@ -65,32 +65,21 @@ variable "master_authorized_networks" {
   ]
 }
 
-# Atlassian Data Center Helm Chart variables
-variable "product" {
-  description = "The Atlassian Data Center product to deploy (jira, confluence, bitbucket, crowd, bamboo)"
+# Bitbucket Data Center Helm Chart variables
+variable "bitbucket_version" {
+  description = "The Bitbucket Data Center version to deploy"
   type        = string
-  default     = "jira"
-
-  validation {
-    condition     = contains(["jira", "confluence", "bitbucket", "crowd", "bamboo"], var.product)
-    error_message = "product must be one of: jira, confluence, bitbucket, crowd, bamboo"
-  }
+  default     = "9.4"
 }
 
-variable "product_version" {
-  description = "The product image tag to deploy"
-  type        = string
-  default     = ""
-}
-
-variable "helm_chart_version" {
-  description = "The version of the Atlassian Data Center Helm chart"
+variable "bitbucket_helm_chart_version" {
+  description = "The version of the Atlassian Bitbucket Helm chart"
   type        = string
   default     = "1.22.0"
 }
 
-variable "replicas" {
-  description = "Number of product replicas"
+variable "bitbucket_replicas" {
+  description = "Number of Bitbucket replicas"
   type        = number
   default     = 1
 }
@@ -101,62 +90,56 @@ variable "storage_class" {
   default     = "standard-rwo"
 }
 
-variable "storage_size" {
-  description = "Storage size for product local home"
+variable "bitbucket_storage_size" {
+  description = "Storage size for Bitbucket local home"
   type        = string
   default     = "50Gi"
 }
 
-variable "shared_storage_size" {
-  description = "Storage size for product shared home"
+variable "bitbucket_shared_storage_size" {
+  description = "Storage size for Bitbucket shared home"
   type        = string
   default     = "50Gi"
 }
 
-variable "cpu_request" {
-  description = "CPU request for product container"
+variable "bitbucket_cpu_request" {
+  description = "CPU request for Bitbucket container"
+  type        = string
+  default     = "1"
+}
+
+variable "bitbucket_cpu_limit" {
+  description = "CPU limit for Bitbucket container"
   type        = string
   default     = "2"
 }
 
-variable "cpu_limit" {
-  description = "CPU limit for product container"
-  type        = string
-  default     = "4"
-}
-
-variable "memory_request" {
-  description = "Memory request for product container"
+variable "bitbucket_memory_request" {
+  description = "Memory request for Bitbucket container"
   type        = string
   default     = "4Gi"
 }
 
-variable "memory_limit" {
-  description = "Memory limit for product container"
+variable "bitbucket_memory_limit" {
+  description = "Memory limit for Bitbucket container"
   type        = string
   default     = "6Gi"
 }
 
-variable "jvm_min_heap" {
+variable "bitbucket_jvm_min_heap" {
   description = "JVM minimum heap size"
-  type        = string
-  default     = "384m"
-}
-
-variable "jvm_max_heap" {
-  description = "JVM maximum heap size"
   type        = string
   default     = "2g"
 }
 
-variable "service_port" {
-  description = "Override the HTTP port the application listens on (used for health checks). Defaults to the product's standard port."
-  type        = number
-  default     = null
+variable "bitbucket_jvm_max_heap" {
+  description = "JVM maximum heap size"
+  type        = string
+  default     = "4g"
 }
 
 variable "dns_name" {
-  description = "DNS name for the product (e.g., jira.example.com.). Used for SSL certificate."
+  description = "DNS name for Bitbucket (e.g., bitbucket.example.com.). Used for Google-managed SSL certificate."
   type        = string
   default     = ""
 }
@@ -182,19 +165,19 @@ variable "database_tier" {
 variable "database_name" {
   description = "The name of the database."
   type        = string
-  default     = "atlassian"
+  default     = "bitbucket"
 }
 
 variable "database_username" {
   description = "The username of the database."
   type        = string
-  default     = "atlassian"
+  default     = "bitbucket"
 }
 
 variable "database_password" {
   description = "The password of the database."
   type        = string
-  default     = "atlassian"
+  default     = "bitbucket"
 }
 
 variable "acme_email" {

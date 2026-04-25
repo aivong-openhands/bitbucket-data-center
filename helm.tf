@@ -1,59 +1,58 @@
 
-# Atlassian Data Center Helm Release
-resource "helm_release" "app" {
-  name       = var.product
-  namespace  = kubernetes_namespace.app.metadata[0].name
+# Bitbucket Data Center Helm Release
+resource "helm_release" "bitbucket" {
+  name       = "bitbucket"
+  namespace  = kubernetes_namespace.bitbucket.metadata[0].name
   repository = "https://atlassian.github.io/data-center-helm-charts"
-  chart      = var.product
-  version    = var.helm_chart_version
+  chart      = "bitbucket"
+  version    = var.bitbucket_helm_chart_version
 
   values = [
     yamlencode({
       image = {
-        tag = var.product_version
+        tag = var.bitbucket_version
       }
-      replicaCount = var.replicas
+      replicaCount = var.bitbucket_replicas
       database = {
         url    = "jdbc:postgresql://${google_sql_database_instance.instance.private_ip_address}:5432/${var.database_name}"
         driver = "org.postgresql.Driver"
         credentials = {
-          secretName = kubernetes_secret.app_db_credentials.metadata[0].name
+          secretName = kubernetes_secret.bitbucket_db_credentials.metadata[0].name
         }
       }
-      (var.product) = {
+      bitbucket = {
         resources = {
           jvm = {
-            maxHeap = var.jvm_max_heap
-            minHeap = var.jvm_min_heap
+            maxHeap = var.bitbucket_jvm_max_heap
+            minHeap = var.bitbucket_jvm_min_heap
           }
           container = {
             requests = {
-              cpu    = var.cpu_request
-              memory = var.memory_request
+              cpu    = var.bitbucket_cpu_request
+              memory = var.bitbucket_memory_request
             }
             limits = {
-              cpu    = var.cpu_limit
-              memory = var.memory_limit
+              cpu    = var.bitbucket_cpu_limit
+              memory = var.bitbucket_memory_limit
             }
           }
+        }
+        service = {
+          type = "LoadBalancer"
         }
         # Enable HTTPS - SSL terminated at load balancer
         additionalEnvironmentVariables = [
           {
-            name  = "ATL_PROXY_NAME"
-            value = local.app_domain
+            name  = "SERVER_SECURE"
+            value = "true"
           },
           {
-            name  = "ATL_PROXY_PORT"
-            value = "443"
-          },
-          {
-            name  = "ATL_TOMCAT_SCHEME"
+            name  = "SERVER_SCHEME"
             value = "https"
           },
           {
-            name  = "ATL_TOMCAT_SECURE"
-            value = "true"
+            name  = "SERVER_PROXY_PORT"
+            value = "443"
           }
         ]
       }
@@ -67,7 +66,7 @@ resource "helm_release" "app" {
             storageClassName = var.storage_class
             resources = {
               requests = {
-                storage = var.storage_size
+                storage = var.bitbucket_storage_size
               }
             }
           }
@@ -88,11 +87,11 @@ resource "helm_release" "app" {
   timeout = 900
 
   depends_on = [
-    kubernetes_namespace.app,
+    kubernetes_namespace.bitbucket,
     google_container_node_pool.primary_nodes,
-    kubernetes_secret.app_db_credentials,
+    kubernetes_secret.bitbucket_db_credentials,
     google_sql_database_instance.instance,
-    google_sql_database.app,
+    google_sql_database.bitbucket,
     google_sql_user.db_user
   ]
 }

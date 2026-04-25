@@ -1,11 +1,11 @@
 # BackendConfig for health checks
-resource "kubectl_manifest" "app_backend_config" {
+resource "kubectl_manifest" "bitbucket_backend_config" {
   yaml_body = <<-YAML
     apiVersion: cloud.google.com/v1
     kind: BackendConfig
     metadata:
-      name: ${var.product}-backend-config
-      namespace: ${kubernetes_namespace.app.metadata[0].name}
+      name: bitbucket-backend-config
+      namespace: ${kubernetes_namespace.bitbucket.metadata[0].name}
     spec:
       healthCheck:
         checkIntervalSec: 30
@@ -14,23 +14,23 @@ resource "kubectl_manifest" "app_backend_config" {
         unhealthyThreshold: 3
         type: HTTP
         requestPath: /status
-        port: ${local.service_port}
+        port: 7990
   YAML
 
   force_conflicts   = true
   server_side_apply = true
 
-  depends_on = [kubernetes_namespace.app]
+  depends_on = [kubernetes_namespace.bitbucket]
 }
 
 # FrontendConfig for HTTP to HTTPS redirect
-resource "kubectl_manifest" "app_frontend_config" {
+resource "kubectl_manifest" "bitbucket_frontend_config" {
   yaml_body = <<-YAML
     apiVersion: networking.gke.io/v1beta1
     kind: FrontendConfig
     metadata:
-      name: ${var.product}-frontend-config
-      namespace: ${kubernetes_namespace.app.metadata[0].name}
+      name: bitbucket-frontend-config
+      namespace: ${kubernetes_namespace.bitbucket.metadata[0].name}
     spec:
       redirectToHttps:
         enabled: true
@@ -40,5 +40,5 @@ resource "kubectl_manifest" "app_frontend_config" {
   force_conflicts   = true
   server_side_apply = true
 
-  depends_on = [kubernetes_namespace.app]
+  depends_on = [kubernetes_namespace.bitbucket]
 }

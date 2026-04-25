@@ -1,9 +1,9 @@
-# Namespace for Atlassian Data Center product
-resource "kubernetes_namespace" "app" {
+# Namespace for Bitbucket Data Center
+resource "kubernetes_namespace" "bitbucket" {
   metadata {
-    name = var.product
+    name = "bitbucket"
     labels = {
-      app        = var.product
+      app        = "bitbucket"
       managed-by = "terraform"
     }
   }
@@ -11,11 +11,11 @@ resource "kubernetes_namespace" "app" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
-# Kubernetes Secret for database credentials
-resource "kubernetes_secret" "app_db_credentials" {
+# Kubernetes Secret for Bitbucket database credentials
+resource "kubernetes_secret" "bitbucket_db_credentials" {
   metadata {
-    name      = "${var.product}-db-credentials"
-    namespace = kubernetes_namespace.app.metadata[0].name
+    name      = "bitbucket-db-credentials"
+    namespace = kubernetes_namespace.bitbucket.metadata[0].name
   }
 
   data = {
@@ -25,20 +25,20 @@ resource "kubernetes_secret" "app_db_credentials" {
 
   type = "Opaque"
 
-  depends_on = [kubernetes_namespace.app]
+  depends_on = [kubernetes_namespace.bitbucket]
 }
 
 # Ingress for HTTP (GKE Ingress controller creates the URL map and backend)
 # HTTPS is handled separately via google_compute_target_https_proxy
-resource "kubernetes_ingress_v1" "app" {
+resource "kubernetes_ingress_v1" "bitbucket" {
   metadata {
-    name      = "${var.product}-ingress"
-    namespace = kubernetes_namespace.app.metadata[0].name
+    name      = "bitbucket-ingress"
+    namespace = kubernetes_namespace.bitbucket.metadata[0].name
     annotations = {
       "kubernetes.io/ingress.class"                 = "gce"
-      "kubernetes.io/ingress.global-static-ip-name" = google_compute_global_address.app_ip.name
+      "kubernetes.io/ingress.global-static-ip-name" = google_compute_global_address.bitbucket_ip.name
       # FrontendConfig for HTTP to HTTPS redirect
-      "networking.gke.io/v1beta1.FrontendConfig" = "${var.product}-frontend-config"
+      "networking.gke.io/v1beta1.FrontendConfig" = "bitbucket-frontend-config"
       # Allow HTTP (will redirect to HTTPS via FrontendConfig)
       "kubernetes.io/ingress.allow-http" = "true"
     }
@@ -47,7 +47,7 @@ resource "kubernetes_ingress_v1" "app" {
   spec {
     default_backend {
       service {
-        name = var.product
+        name = "bitbucket"
         port {
           number = 80
         }
@@ -55,14 +55,14 @@ resource "kubernetes_ingress_v1" "app" {
     }
 
     rule {
-      host = local.app_domain
+      host = local.bitbucket_domain
       http {
         path {
           path      = "/*"
           path_type = "ImplementationSpecific"
           backend {
             service {
-              name = var.product
+              name = "bitbucket"
               port {
                 number = 80
               }
@@ -74,24 +74,24 @@ resource "kubernetes_ingress_v1" "app" {
   }
 
   depends_on = [
-    helm_release.app,
-    kubectl_manifest.app_backend_config,
-    kubectl_manifest.app_frontend_config,
-    google_certificate_manager_certificate_map_entry.app
+    helm_release.bitbucket,
+    kubectl_manifest.bitbucket_backend_config,
+    kubectl_manifest.bitbucket_frontend_config,
+    google_certificate_manager_certificate_map_entry.bitbucket
   ]
 }
 
 # Annotate service with BackendConfig
-resource "kubernetes_annotations" "app_service" {
+resource "kubernetes_annotations" "bitbucket_service" {
   api_version = "v1"
   kind        = "Service"
   metadata {
-    name      = var.product
-    namespace = kubernetes_namespace.app.metadata[0].name
+    name      = "bitbucket"
+    namespace = kubernetes_namespace.bitbucket.metadata[0].name
   }
   annotations = {
-    "cloud.google.com/backend-config" = "{\"default\": \"${var.product}-backend-config\"}"
+    "cloud.google.com/backend-config" = "{\"default\": \"bitbucket-backend-config\"}"
   }
 
-  depends_on = [helm_release.app, kubectl_manifest.app_backend_config]
+  depends_on = [helm_release.bitbucket, kubectl_manifest.bitbucket_backend_config]
 }

@@ -1,23 +1,6 @@
-# Atlassian Data Center on GKE
+# Description
 
-Deploys an Atlassian Data Center product (Jira, Confluence, Bitbucket, Crowd, or Bamboo) on a GKE cluster in GCP using the [official Atlassian Data Center Helm charts](https://atlassian.github.io/data-center-helm-charts/).
-
-**What Terraform creates:**
-- VPC network
-- GKE cluster with a managed node pool
-- Cloud SQL (PostgreSQL) instance via private VPC peering
-- Global static IP and Cloud DNS A record
-- Let's Encrypt TLS certificate via ACME + GCP Certificate Manager
-- GKE Ingress with HTTPS forwarding rule and HTTP→HTTPS redirect
-- Atlassian product deployed via Helm
-
-
-## Prerequisites
-
-- GCP project with billing enabled
-- Cloud DNS managed zone
-- `gcloud` authenticated with sufficient permissions
-- `tfenv` or Terraform 1.14.4
+Spins up a BitBucket Data Center GKE cluster in GCP using the official BitBuckeet Data Center helm chart: https://atlassian.github.io/data-center-helm-charts/
 
 
 ## Terraform
@@ -29,43 +12,40 @@ tfenv install 1.14.4
 tfenv use 1.14.4
 ```
 
-### Initialize
+### Create a workspace
 
+Initialize working directory:
 ```
 terraform init
 ```
 
-### Create a workspace
-
+This project uses Terraform workspaces. Create a new workspace:
 ```
-terraform workspace new <YOUR_NAME>-<PRODUCT>-01
-```
-
-### Create a tfvars file
-
-Copy the example and fill in your values:
-
-```
-cp tfvars.example <WORKSPACE_NAME>.tfvars
+terraform workspace new <<YOUR_NAME>>-bitbucket-01
 ```
 
-Required variables:
+### Create tfvars file
 
-| Variable | Description | Example |
-|---|---|---|
-| `cluster_name` | GKE cluster name (also used as VPC name) | `myname-jira-01` |
-| `product` | Atlassian product (`jira`, `confluence`, `bitbucket`, `crowd`, `bamboo`) | `jira` |
-| `dns_name` | FQDN for the product (trailing dot required) | `jira.example.com.` |
-| `dns_zone_name` | Cloud DNS managed zone name | `example-com-zone` |
-| `acme_email` | Email for Let's Encrypt registration | `you@example.com` |
-
-See `tfvars.example` and `variables.tf` for all available options.
-
-### Plan and apply
+Make a copy of `tfvars.example` and name it `<<WORKSPACE_NAME>>.tfvars`:
 
 ```
-terraform plan -var-file=<WORKSPACE_NAME>.tfvars -out <WORKSPACE_NAME>.out
-terraform apply <WORKSPACE_NAME>.out
+cp example.tfvars name-bitbucket-01.tfvars
 ```
 
-After apply, Terraform outputs the `app_url` where the product is accessible.
+Update variables for your Replicated VM instance.
+
+### Terraform plan
+
+```
+terraform plan -var-file=<<WORKSPACE_NAME>>.tfvars -out <<WORKSPACE_NAME>>.out
+```
+
+### Terraform apply
+
+```
+terraform apply <<WORKSPACE_NAME>>.out
+```
+
+## Get an Atlassian license
+
+Sign up at my.atlassian.com to get a trial license.
