@@ -4,12 +4,12 @@
 
 # Wait for GKE Ingress controller to create the URL map
 resource "time_sleep" "wait_for_ingress" {
-  depends_on = [kubernetes_ingress_v1.bitbucket]
+  depends_on = [kubernetes_ingress_v1.app]
 
   create_duration = "120s"
 
   triggers = {
-    ingress_name = kubernetes_ingress_v1.bitbucket.metadata[0].name
+    ingress_name = kubernetes_ingress_v1.app.metadata[0].name
   }
 }
 
@@ -21,7 +21,7 @@ data "external" "ingress_url_map" {
     gcloud container clusters get-credentials "${var.cluster_name}" --region "${var.region}" --project "${var.project_id}" 2>/dev/null
 
     for i in {1..30}; do
-      URL_MAP=$(kubectl get ingress bitbucket-ingress -n bitbucket -o jsonpath='{.metadata.annotations.ingress\.kubernetes\.io/url-map}' 2>/dev/null)
+      URL_MAP=$(kubectl get ingress ${var.product}-ingress -n ${var.product} -o jsonpath='{.metadata.annotations.ingress\.kubernetes\.io/url-map}' 2>/dev/null)
       if [ -n "$URL_MAP" ]; then
         echo "{\"url_map\": \"$URL_MAP\"}"
         exit 0
@@ -38,14 +38,14 @@ data "external" "ingress_url_map" {
 
 # HTTPS Target Proxy using Certificate Manager certificate map
 # References the URL map created by GKE Ingress controller
-resource "google_compute_target_https_proxy" "bitbucket" {
-  name            = "${var.cluster_name}-bitbucket-https-proxy"
+resource "google_compute_target_https_proxy" "app" {
+  name            = "${var.cluster_name}-https-proxy"
   url_map         = "https://www.googleapis.com/compute/v1/projects/${var.project_id}/global/urlMaps/${data.external.ingress_url_map.result.url_map}"
-  certificate_map = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.bitbucket.id}"
+  certificate_map = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.app.id}"
 
   depends_on = [
     time_sleep.wait_for_ingress,
-    google_certificate_manager_certificate_map_entry.bitbucket
+    google_certificate_manager_certificate_map_entry.app
   ]
 
   lifecycle {
@@ -55,12 +55,12 @@ resource "google_compute_target_https_proxy" "bitbucket" {
 }
 
 # HTTPS Forwarding Rule (port 443)
-resource "google_compute_global_forwarding_rule" "bitbucket_https" {
-  name                  = "${var.cluster_name}-bitbucket-https"
-  target                = google_compute_target_https_proxy.bitbucket.id
-  ip_address            = google_compute_global_address.bitbucket_ip.id
+resource "google_compute_global_forwarding_rule" "app_https" {
+  name                  = "${var.cluster_name}-https"
+  target                = google_compute_target_https_proxy.app.id
+  ip_address            = google_compute_global_address.app_ip.id
   port_range            = "443"
   load_balancing_scheme = "EXTERNAL"
 
-  depends_on = [google_compute_target_https_proxy.bitbucket]
+  depends_on = [google_compute_target_https_proxy.app]
 }

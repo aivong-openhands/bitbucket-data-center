@@ -1,6 +1,6 @@
-output "bitbucket_url" {
-  description = "The HTTPS URL to access Bitbucket"
-  value       = "https://${local.bitbucket_domain}"
+output "app_url" {
+  description = "The HTTPS URL to access the Atlassian Data Center product"
+  value       = "https://${local.app_domain}"
 }
 
 output "database_private_ip" {

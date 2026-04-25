@@ -38,7 +38,7 @@ resource "google_sql_database_instance" "instance" {
   depends_on = [google_service_networking_connection.private_vpc_connection]
 }
 
-resource "google_sql_database" "bitbucket" {
+resource "google_sql_database" "app" {
   name     = var.database_name
   instance = google_sql_database_instance.instance.name
 }

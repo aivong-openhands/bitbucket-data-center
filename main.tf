@@ -75,10 +75,18 @@ provider "kubectl" {
   load_config_file       = false
 }
 
-# Local to get domain without trailing dot
+# Local to get domain without trailing dot, and product-specific service port
 locals {
-  # Remove trailing dot from dns_name if present (e.g., "example.com." -> "example.com")
-  bitbucket_domain = trimsuffix(var.dns_name, ".")
+  app_domain = trimsuffix(var.dns_name, ".")
+
+  default_service_ports = {
+    jira       = 8080
+    confluence = 8090
+    bitbucket  = 7990
+    crowd      = 8095
+    bamboo     = 8085
+  }
+  service_port = var.service_port != null ? var.service_port : lookup(local.default_service_ports, var.product, 8080)
 }
 
 resource "google_compute_network" "vpc_network" {
@@ -87,16 +95,16 @@ resource "google_compute_network" "vpc_network" {
 }
 
 # Static IP for Ingress
-resource "google_compute_global_address" "bitbucket_ip" {
-  name = "${var.cluster_name}-bitbucket-ip"
+resource "google_compute_global_address" "app_ip" {
+  name = "${var.cluster_name}-ip"
 }
 
-# DNS Record for Bitbucket
-resource "google_dns_record_set" "bitbucket" {
+# DNS Record
+resource "google_dns_record_set" "app" {
   project      = var.project_id
   managed_zone = var.dns_zone_name
   name         = var.dns_name
   type         = "A"
   ttl          = 300
-  rrdatas      = [google_compute_global_address.bitbucket_ip.address]
+  rrdatas      = [google_compute_global_address.app_ip.address]
 }

@@ -23,7 +23,7 @@ resource "acme_certificate" "cert" {
   }
 
   depends_on = [
-    google_dns_record_set.bitbucket,
+    google_dns_record_set.app,
   ]
 }
 
@@ -37,16 +37,16 @@ resource "google_certificate_manager_certificate" "default" {
 }
 
 # Certificate Map for Let's Encrypt certificate
-resource "google_certificate_manager_certificate_map" "bitbucket" {
+resource "google_certificate_manager_certificate_map" "app" {
   name        = var.cluster_name
-  description = "Certificate map for Bitbucket (Let's Encrypt)"
+  description = "Certificate map for ${var.product} (Let's Encrypt)"
 }
 
 # Certificate Map Entry to associate Let's Encrypt certificate with the map
-resource "google_certificate_manager_certificate_map_entry" "bitbucket" {
+resource "google_certificate_manager_certificate_map_entry" "app" {
   name         = var.cluster_name
-  description  = "Certificate map entry for Bitbucket domain (Let's Encrypt)"
-  map          = google_certificate_manager_certificate_map.bitbucket.name
+  description  = "Certificate map entry for ${var.product} domain (Let's Encrypt)"
+  map          = google_certificate_manager_certificate_map.app.name
   certificates = [google_certificate_manager_certificate.default.id]
-  hostname     = local.bitbucket_domain
+  hostname     = local.app_domain
 }
